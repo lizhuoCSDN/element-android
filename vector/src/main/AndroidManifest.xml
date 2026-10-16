@@ -475,6 +475,12 @@
                 <action android:name="org.unifiedpush.android.distributor.REGISTER" />
             </intent-filter>
         </receiver>
+                <service
+            android:name="im.vector.app.yibo.NtfyService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
     </application>
 
 </manifest>
