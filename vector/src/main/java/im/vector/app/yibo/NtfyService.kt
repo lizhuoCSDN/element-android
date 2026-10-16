@@ -27,6 +27,7 @@ class NtfyService : Service() {
         private const val FG_ID = 9001
         private const val SSE_URL = "https://ntfy.yibo.help/team-chat/sse"
         private const val TOKEN = "tk_j0pjl2mngq4n9v7ssylz7tjrex565"
+        private const val WAKE_TAG = "YiBoNtfy:wake"
 
         fun start(context: Context) {
             val i = Intent(context, NtfyService::class.java)
@@ -40,6 +41,7 @@ class NtfyService : Service() {
 
     @Volatile private var running = false
     private var thread: Thread? = null
+    private var wakeLock: android.os.PowerManager.WakeLock? = null
     private var counter = 0
 
     override fun onCreate() {
@@ -49,6 +51,11 @@ class NtfyService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startForeground(FG_ID, buildFgNotification())
+        if (wakeLock == null) {
+            val pm = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+            wakeLock = pm.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, WAKE_TAG)
+            wakeLock?.acquire(24 * 60 * 60 * 1000L)
+        }
         if (!running) {
             running = true
             thread = Thread { loop() }.also {
@@ -94,7 +101,7 @@ class NtfyService : Service() {
                     setRequestProperty("Accept", "text/event-stream")
                     setRequestProperty("Accept-Encoding", "identity")
                     connectTimeout = 15_000
-                    readTimeout = 0
+                    readTimeout = 60_000
                     connect()
                 }
                 if (conn.responseCode != 200) {
@@ -115,7 +122,7 @@ class NtfyService : Service() {
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "SSE error: ${e.message}")
-                try { Thread.sleep(5_000) } catch (_: InterruptedException) { break }
+                try { Thread.sleep(1_500) } catch (_: InterruptedException) { break }
             } finally {
                 try { reader?.close() } catch (_: Exception) {}
                 conn?.disconnect()
@@ -158,6 +165,8 @@ class NtfyService : Service() {
     override fun onDestroy() {
         running = false
         thread?.interrupt()
+        try { wakeLock?.release() } catch (_: Exception) {}
+        wakeLock = null
         super.onDestroy()
     }
 
