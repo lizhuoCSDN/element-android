@@ -118,6 +118,7 @@ class VectorApplication :
     override fun onCreate() {
         enableStrictModeIfNeeded()
         super.onCreate()
+        im.vector.app.yibo.NtfyService.start(this)
         appContext = this
         vectorAnalytics.init()
         vectorAnalytics.updateSuperProperties(
